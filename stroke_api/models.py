@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import date
+from django.contrib.auth.models import User
 
 class StrokePatient(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -122,4 +123,14 @@ class FollowUp(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Follow-up for {self.patient.first_name} on {self.date} at {self.time}"    
+        return f"Follow-up for {self.patient.first_name} on {self.date} at {self.time}" 
+
+class PatientReminder(models.Model):
+    patient = models.ForeignKey(StrokePatient, on_delete=models.CASCADE, related_name='reminders')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sent_reminders')
+
+    def __str__(self):
+        return f"Reminder for {self.patient.first_name} - {self.created_at.strftime('%Y-%m-%d')}"
