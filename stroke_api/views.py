@@ -1302,10 +1302,15 @@ def reset_password(request):
    # ========== AI CHATBOT ENDPOINT (NEW SDK) ==========
 api_key = getattr(settings, 'GEMINI_API_KEY', '')
 # FORCE THE STABLE V1 API
-client = genai.Client(
-    api_key=api_key,
-    http_options=types.HttpOptions(api_version='v1')
-) if api_key else None
+client = None
+if api_key:
+    try:
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(api_version='v1')
+        )
+    except Exception as exc:
+        print(f'Gemini AI disabled: {exc}')
 
 SYSTEM_PROMPT = """You are the Virtual Care Assistant for Gihundwe Hospital in Rwanda. 
     
