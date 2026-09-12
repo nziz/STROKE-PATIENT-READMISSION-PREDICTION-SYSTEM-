@@ -46,6 +46,8 @@ import {
     LocalHospital as DoctorIcon,
     People as PeopleIcon,
     Block,
+    PersonAdd,
+    ContentCopy,
 } from '@mui/icons-material';
 
 function UserManagement() {
@@ -64,6 +66,12 @@ function UserManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [sortBy, setSortBy] = useState('name');
+
+    // ─── NEW: ADD STAFF STATES ───
+    const [addStaffOpen, setAddStaffOpen] = useState(false);
+    const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+    const [newCredentials, setNewCredentials] = useState(null);
+    const [staffForm, setStaffForm] = useState({ first_name: '', last_name: '', email: '', role: 'doctor' });
 
     useEffect(() => {
         fetchUsers();
@@ -166,6 +174,20 @@ function UserManagement() {
         URL.revokeObjectURL(link.href);
     };
 
+    // ─── NEW: ADD STAFF HANDLER ───
+    const handleAddStaff = async () => {
+        try {
+            const res = await API.post('users/create-staff/', staffForm);
+            setNewCredentials(res.data);
+            setAddStaffOpen(false);
+            setSuccessDialogOpen(true);
+            setStaffForm({ first_name: '', last_name: '', email: '', role: 'doctor' });
+            fetchUsers();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to add staff');
+        }
+    };
+
     const getRoleColor = (role) => {
         const colors = { doctor: '#2563eb', patient: '#16a34a', admin: '#f59e0b' };
         return colors[role] || '#6b7280';
@@ -265,19 +287,29 @@ function UserManagement() {
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    {/* NEW: ADD STAFF BUTTON */}
+                    <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<PersonAdd sx={{ fontSize: 18 }} />}
+                        onClick={() => setAddStaffOpen(true)}
+                        sx={{
+                            borderRadius: 2, textTransform: 'none', fontWeight: 600,
+                            bgcolor: '#0d47a1', px: 2, py: 1,
+                            boxShadow: '0 2px 4px rgba(13,71,161,0.2)',
+                            '&:hover': { bgcolor: '#0a3a80' },
+                        }}
+                    >
+                        Add Staff
+                    </Button>
                     <Button
                         variant="outlined"
                         size="small"
                         startIcon={<GetAppIcon sx={{ fontSize: 18 }} />}
                         onClick={handleExportCSV}
                         sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            px: 2,
-                            py: 1,
+                            borderRadius: 2, textTransform: 'none', fontWeight: 500,
+                            borderColor: '#d1d5db', color: '#374151', px: 2, py: 1,
                             '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
                         }}
                     >
@@ -289,13 +321,8 @@ function UserManagement() {
                         startIcon={<Refresh sx={{ fontSize: 18 }} />}
                         onClick={fetchUsers}
                         sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            px: 2,
-                            py: 1,
+                            borderRadius: 2, textTransform: 'none', fontWeight: 500,
+                            borderColor: '#d1d5db', color: '#374151', px: 2, py: 1,
                             '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
                         }}
                     >
@@ -314,43 +341,14 @@ function UserManagement() {
                             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
-                                        <Typography
-                                            variant="caption"
-                                            sx={{
-                                                color: '#6b7280',
-                                                fontWeight: 600,
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.08em',
-                                                fontSize: '0.65rem',
-                                            }}
-                                        >
+                                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.65rem' }}>
                                             {stat.title}
                                         </Typography>
-                                        <Typography
-                                            variant="h5"
-                                            sx={{
-                                                fontWeight: 700,
-                                                color: stat.color,
-                                                lineHeight: 1.2,
-                                                mt: 0.5,
-                                                fontSize: '1.5rem',
-                                            }}
-                                        >
+                                        <Typography variant="h5" sx={{ fontWeight: 700, color: stat.color, lineHeight: 1.2, mt: 0.5, fontSize: '1.5rem' }}>
                                             {stat.value}
                                         </Typography>
                                     </Box>
-                                    <Box
-                                        sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: 2,
-                                            bgcolor: stat.lightColor,
-                                            color: stat.color,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                        }}
-                                    >
+                                    <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: stat.lightColor, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         {stat.icon}
                                     </Box>
                                 </Box>
@@ -371,44 +369,16 @@ function UserManagement() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon sx={{ color: '#9ca3af', fontSize: 20 }} />
-                                    </InputAdornment>
-                                ),
-                                endAdornment: searchTerm && (
-                                    <InputAdornment position="end">
-                                        <IconButton size="small" onClick={() => setSearchTerm('')}>
-                                            <ClearIcon sx={{ color: '#9ca3af', fontSize: 18 }} />
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
+                                startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ color: '#9ca3af', fontSize: 20 }} /></InputAdornment>),
+                                endAdornment: searchTerm && (<InputAdornment position="end"><IconButton size="small" onClick={() => setSearchTerm('')}><ClearIcon sx={{ color: '#9ca3af', fontSize: 18 }} /></IconButton></InputAdornment>),
                             }}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2,
-                                    bgcolor: '#f9fafb',
-                                    '& fieldset': { borderColor: '#e5e7eb' },
-                                    '&:hover fieldset': { borderColor: '#d1d5db' },
-                                    '&.Mui-focused fieldset': { borderColor: '#2563eb' },
-                                },
-                            }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#f9fafb', '& fieldset': { borderColor: '#e5e7eb' }, '&:hover fieldset': { borderColor: '#d1d5db' }, '&.Mui-focused fieldset': { borderColor: '#2563eb' } } }}
                         />
                     </Grid>
                     <Grid item xs={6} sm={3}>
                         <FormControl fullWidth size="small">
                             <InputLabel sx={{ color: '#6b7280' }}>Role</InputLabel>
-                            <Select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
-                                label="Role"
-                                sx={{
-                                    borderRadius: 2,
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
-                                }}
-                            >
+                            <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} label="Role" sx={{ borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' } }}>
                                 <MenuItem value="all">All Roles</MenuItem>
                                 <MenuItem value="doctor">Doctor</MenuItem>
                                 <MenuItem value="patient">Patient</MenuItem>
@@ -418,17 +388,7 @@ function UserManagement() {
                     <Grid item xs={6} sm={3}>
                         <FormControl fullWidth size="small">
                             <InputLabel sx={{ color: '#6b7280' }}>Sort By</InputLabel>
-                            <Select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                label="Sort By"
-                                sx={{
-                                    borderRadius: 2,
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
-                                }}
-                            >
+                            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} label="Sort By" sx={{ borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' } }}>
                                 <MenuItem value="name">Name</MenuItem>
                                 <MenuItem value="role">Role</MenuItem>
                                 <MenuItem value="status">Status</MenuItem>
@@ -436,21 +396,7 @@ function UserManagement() {
                         </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={1}>
-                        <Button
-                            fullWidth
-                            variant="outlined"
-                            size="small"
-                            onClick={() => { setSearchTerm(''); setRoleFilter('all'); setSortBy('name'); }}
-                            sx={{
-                                borderRadius: 2,
-                                textTransform: 'none',
-                                fontWeight: 500,
-                                borderColor: '#d1d5db',
-                                color: '#374151',
-                                py: 1,
-                                '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
-                            }}
-                        >
+                        <Button fullWidth variant="outlined" size="small" onClick={() => { setSearchTerm(''); setRoleFilter('all'); setSortBy('name'); }} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, borderColor: '#d1d5db', color: '#374151', py: 1, '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' } }}>
                             Reset
                         </Button>
                     </Grid>
@@ -469,150 +415,54 @@ function UserManagement() {
                         <Table>
                             <TableHead>
                                 <TableRow sx={{ bgcolor: '#f9fafb' }}>
-                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>
-                                        User
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>
-                                        Email
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>
-                                        Role
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>
-                                        Status
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }} align="right">
-                                        Actions
-                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>User</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>Email</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>Role</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.7rem', borderBottom: '1px solid #e5e7eb' }} align="right">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {filteredUsers.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} align="center" sx={{ py: 6, borderBottom: 'none' }}>
-                                            <Typography sx={{ color: '#6b7280', fontWeight: 500 }}>
-                                                No users found matching your filters.
-                                            </Typography>
+                                            <Typography sx={{ color: '#6b7280', fontWeight: 500 }}>No users found matching your filters.</Typography>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     filteredUsers.map((user) => (
-                                        <TableRow
-                                            key={user.id}
-                                            hover
-                                            sx={{
-                                                opacity: user.is_active ? 1 : 0.6,
-                                                bgcolor: user.is_active ? 'transparent' : '#fef2f2',
-                                                '&:last-child td': { borderBottom: 'none' },
-                                            }}
-                                        >
+                                        <TableRow key={user.id} hover sx={{ opacity: user.is_active ? 1 : 0.6, bgcolor: user.is_active ? 'transparent' : '#fef2f2', '&:last-child td': { borderBottom: 'none' } }}>
                                             <TableCell sx={{ borderBottom: '1px solid #f3f4f6', py: 1.5 }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar
-                                                        sx={{
-                                                            width: 36,
-                                                            height: 36,
-                                                            bgcolor: getRoleBgColor(user.role),
-                                                            color: getRoleColor(user.role),
-                                                            fontWeight: 600,
-                                                            fontSize: '0.85rem',
-                                                        }}
-                                                    >
+                                                    <Avatar sx={{ width: 36, height: 36, bgcolor: getRoleBgColor(user.role), color: getRoleColor(user.role), fontWeight: 600, fontSize: '0.85rem' }}>
                                                         {getInitials(user.first_name, user.last_name)}
                                                     </Avatar>
                                                     <Box>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827' }}>
-                                                            {user.first_name} {user.last_name}
-                                                        </Typography>
-                                                        <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500 }}>
-                                                            @{user.username}
-                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827' }}>{user.first_name} {user.last_name}</Typography>
+                                                        <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500 }}>@{user.username}</Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ borderBottom: '1px solid #f3f4f6', color: '#374151', fontWeight: 500 }}>
-                                                {user.email || 'N/A'}
+                                            <TableCell sx={{ borderBottom: '1px solid #f3f4f6', color: '#374151', fontWeight: 500 }}>{user.email || 'N/A'}</TableCell>
+                                            <TableCell sx={{ borderBottom: '1px solid #f3f4f6' }}>
+                                                <Chip label={user.role.toUpperCase()} size="small" sx={{ bgcolor: getRoleBgColor(user.role), color: getRoleColor(user.role), fontWeight: 600, borderRadius: 2, fontSize: '0.7rem' }} />
                                             </TableCell>
                                             <TableCell sx={{ borderBottom: '1px solid #f3f4f6' }}>
-                                                <Chip
-                                                    label={user.role.toUpperCase()}
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: getRoleBgColor(user.role),
-                                                        color: getRoleColor(user.role),
-                                                        fontWeight: 600,
-                                                        borderRadius: 2,
-                                                        fontSize: '0.7rem',
-                                                    }}
-                                                />
-                                            </TableCell>
-                                            <TableCell sx={{ borderBottom: '1px solid #f3f4f6' }}>
-                                                <Chip
-                                                    label={user.is_active ? 'Active' : 'Blocked'}
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: getStatusBgColor(user.is_active),
-                                                        color: getStatusColor(user.is_active),
-                                                        fontWeight: 600,
-                                                        borderRadius: 2,
-                                                        fontSize: '0.7rem',
-                                                    }}
-                                                />
+                                                <Chip label={user.is_active ? 'Active' : 'Blocked'} size="small" sx={{ bgcolor: getStatusBgColor(user.is_active), color: getStatusColor(user.is_active), fontWeight: 600, borderRadius: 2, fontSize: '0.7rem' }} />
                                             </TableCell>
                                             <TableCell align="right" sx={{ borderBottom: '1px solid #f3f4f6' }}>
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                    <Tooltip title="View Details">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleViewUser(user)}
-                                                            sx={{ color: '#6b7280', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }}
-                                                        >
-                                                            <ViewIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    <Tooltip title="View Details"><IconButton size="small" onClick={() => handleViewUser(user)} sx={{ color: '#6b7280', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }}><ViewIcon fontSize="small" /></IconButton></Tooltip>
                                                     {user.role === 'patient' && user.patient_id && (
-                                                        <Tooltip title="View Patient Record">
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleViewPatient(user.patient_id)}
-                                                                sx={{ color: '#6b7280', '&:hover': { color: '#16a34a', bgcolor: '#f0fdf4' } }}
-                                                            >
-                                                                <PersonIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
+                                                        <Tooltip title="View Patient Record"><IconButton size="small" onClick={() => handleViewPatient(user.patient_id)} sx={{ color: '#6b7280', '&:hover': { color: '#16a34a', bgcolor: '#f0fdf4' } }}><PersonIcon fontSize="small" /></IconButton></Tooltip>
                                                     )}
-                                                    <Tooltip title="Change Role">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleRoleChange(user)}
-                                                            sx={{ color: '#6b7280', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }}
-                                                        >
-                                                            <Edit fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    <Tooltip title="Change Role"><IconButton size="small" onClick={() => handleRoleChange(user)} sx={{ color: '#6b7280', '&:hover': { color: '#2563eb', bgcolor: '#eff6ff' } }}><Edit fontSize="small" /></IconButton></Tooltip>
                                                     <Tooltip title={user.is_active ? 'Block User' : 'Unblock User'}>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleToggleActive(user)}
-                                                            sx={{
-                                                                color: user.is_active ? '#f59e0b' : '#16a34a',
-                                                                '&:hover': {
-                                                                    bgcolor: user.is_active ? '#fffbeb' : '#f0fdf4',
-                                                                },
-                                                            }}
-                                                        >
+                                                        <IconButton size="small" onClick={() => handleToggleActive(user)} sx={{ color: user.is_active ? '#f59e0b' : '#16a34a', '&:hover': { bgcolor: user.is_active ? '#fffbeb' : '#f0fdf4' } }}>
                                                             {user.is_active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
                                                         </IconButton>
                                                     </Tooltip>
-                                                    <Tooltip title="Delete User">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleDeleteClick(user)}
-                                                            sx={{ color: '#6b7280', '&:hover': { color: '#dc2626', bgcolor: '#fef2f2' } }}
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    <Tooltip title="Delete User"><IconButton size="small" onClick={() => handleDeleteClick(user)} sx={{ color: '#6b7280', '&:hover': { color: '#dc2626', bgcolor: '#fef2f2' } }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                                                 </Box>
                                             </TableCell>
                                         </TableRow>
@@ -624,136 +474,38 @@ function UserManagement() {
                 </CardContent>
             </Card>
 
-            {/* ─── CHANGE ROLE DIALOG ─── */}
-            <Dialog
-                open={dialogOpen}
-                onClose={() => setDialogOpen(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}
-            >
-                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>
-                        Change Role
-                    </Typography>
-                </DialogTitle>
+            {/* ─── EXISTING DIALOGS ─── */}
+            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}>
+                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5 }}><Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>Change Role</Typography></DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 1, pb: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 2, color: '#374151', fontWeight: 500 }}>
-                        Change role for user: <strong>{selectedUser?.username}</strong>
-                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, color: '#374151', fontWeight: 500 }}>Change role for user: <strong>{selectedUser?.username}</strong></Typography>
                     <FormControl fullWidth>
                         <InputLabel sx={{ color: '#6b7280' }}>Role</InputLabel>
-                        <Select
-                            value={newRole}
-                            onChange={(e) => setNewRole(e.target.value)}
-                            label="Role"
-                            sx={{
-                                borderRadius: 2,
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' },
-                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db' },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2563eb' },
-                            }}
-                        >
+                        <Select value={newRole} onChange={(e) => setNewRole(e.target.value)} label="Role" sx={{ borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' } }}>
                             <MenuItem value="doctor">Doctor</MenuItem>
                             <MenuItem value="patient">Patient</MenuItem>
                         </Select>
                     </FormControl>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
-                    <Button
-                        onClick={() => setDialogOpen(false)}
-                        variant="outlined"
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSaveRole}
-                        variant="contained"
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            bgcolor: '#2563eb',
-                            boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
-                            '&:hover': { bgcolor: '#1d4ed8' },
-                        }}
-                    >
-                        Save
-                    </Button>
+                    <Button onClick={() => setDialogOpen(false)} variant="outlined" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
+                    <Button onClick={handleSaveRole} variant="contained" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>Save</Button>
                 </DialogActions>
             </Dialog>
 
-            {/* ─── DELETE CONFIRMATION DIALOG ─── */}
-            <Dialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                maxWidth="xs"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}
-            >
-                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5, bgcolor: '#fef2f2', color: '#dc2626' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                        Delete User
-                    </Typography>
-                </DialogTitle>
+            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}>
+                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5, bgcolor: '#fef2f2', color: '#dc2626' }}><Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>Delete User</Typography></DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
-                    <Typography sx={{ color: '#374151', fontSize: '0.95rem', fontWeight: 500 }}>
-                        Are you sure you want to delete <strong>{userToDelete?.username}</strong>? This action cannot be undone.
-                    </Typography>
+                    <Typography sx={{ color: '#374151', fontSize: '0.95rem', fontWeight: 500 }}>Are you sure you want to delete <strong>{userToDelete?.username}</strong>? This action cannot be undone.</Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
-                    <Button
-                        onClick={() => setDeleteDialogOpen(false)}
-                        variant="outlined"
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleDeleteConfirm}
-                        variant="contained"
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            bgcolor: '#dc2626',
-                            boxShadow: '0 1px 3px rgba(220,38,38,0.3)',
-                            '&:hover': { bgcolor: '#b91c1c' },
-                        }}
-                    >
-                        Delete
-                    </Button>
+                    <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
+                    <Button onClick={handleDeleteConfirm} variant="contained" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' } }}>Delete</Button>
                 </DialogActions>
             </Dialog>
 
-            {/* ─── VIEW USER DETAILS DIALOG ─── */}
-            <Dialog
-                open={viewDialogOpen}
-                onClose={() => setViewDialogOpen(false)}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}
-            >
-                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>
-                        User Details
-                    </Typography>
-                </DialogTitle>
+            <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}>
+                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5 }}><Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>User Details</Typography></DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 1, pb: 1 }}>
                     {selectedUser && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -768,30 +520,12 @@ function UserManagement() {
                                 ...(selectedUser.phone ? [{ label: 'Phone', value: selectedUser.phone }] : []),
                             ].map((field, idx) => (
                                 <Box key={idx}>
-                                    <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500, display: 'block', mb: 0.25 }}>
-                                        {field.label}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600 }}>
-                                        {field.value}
-                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500, display: 'block', mb: 0.25 }}>{field.label}</Typography>
+                                    <Typography variant="body2" sx={{ color: '#111827', fontWeight: 600 }}>{field.value}</Typography>
                                 </Box>
                             ))}
                             {selectedUser.role === 'patient' && selectedUser.patient_id && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    startIcon={<PersonIcon sx={{ fontSize: 18 }} />}
-                                    onClick={() => { setViewDialogOpen(false); handleViewPatient(selectedUser.patient_id); }}
-                                    sx={{
-                                        mt: 1,
-                                        borderRadius: 2,
-                                        textTransform: 'none',
-                                        fontWeight: 500,
-                                        borderColor: '#16a34a',
-                                        color: '#16a34a',
-                                        '&:hover': { bgcolor: '#f0fdf4', borderColor: '#16a34a' },
-                                    }}
-                                >
+                                <Button variant="outlined" size="small" startIcon={<PersonIcon sx={{ fontSize: 18 }} />} onClick={() => { setViewDialogOpen(false); handleViewPatient(selectedUser.patient_id); }} sx={{ mt: 1, borderRadius: 2, textTransform: 'none', fontWeight: 500, borderColor: '#16a34a', color: '#16a34a', '&:hover': { bgcolor: '#f0fdf4', borderColor: '#16a34a' } }}>
                                     View Patient Record
                                 </Button>
                             )}
@@ -799,20 +533,64 @@ function UserManagement() {
                     )}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-                    <Button
-                        onClick={() => setViewDialogOpen(false)}
-                        variant="contained"
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            bgcolor: '#2563eb',
-                            boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
-                            '&:hover': { bgcolor: '#1d4ed8' },
-                        }}
-                    >
-                        Close
-                    </Button>
+                    <Button onClick={() => setViewDialogOpen(false)} variant="contained" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 500, bgcolor: '#2563eb', '&:hover': { bgcolor: '#1d4ed8' } }}>Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ─── NEW: ADD STAFF DIALOG ─── */}
+            <Dialog open={addStaffOpen} onClose={() => setAddStaffOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}>
+                <DialogTitle sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#0d47a1', fontSize: '1.1rem' }}>Onboard New Staff Member</Typography>
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 1, pb: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#64748b' }}>Create a new login for a Doctor or Nurse. They will be granted access to the clinical dashboard.</Typography>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <TextField fullWidth label="First Name *" value={staffForm.first_name} onChange={(e) => setStaffForm({...staffForm, first_name: e.target.value})} />
+                        <TextField fullWidth label="Last Name" value={staffForm.last_name} onChange={(e) => setStaffForm({...staffForm, last_name: e.target.value})} />
+                    </Box>
+                    <TextField fullWidth label="Email Address *" type="email" value={staffForm.email} onChange={(e) => setStaffForm({...staffForm, email: e.target.value})} />
+                    <FormControl fullWidth>
+                        <InputLabel>Role *</InputLabel>
+                        <Select value={staffForm.role} label="Role *" onChange={(e) => setStaffForm({...staffForm, role: e.target.value})}>
+                            <MenuItem value="doctor">Doctor</MenuItem>
+                            <MenuItem value="nurse">Nurse</MenuItem>
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
+                    <Button onClick={() => setAddStaffOpen(false)} variant="outlined" sx={{ borderRadius: 2, textTransform: 'none', borderColor: '#d1d5db', color: '#374151' }}>Cancel</Button>
+                    <Button onClick={handleAddStaff} variant="contained" disabled={!staffForm.first_name || !staffForm.email} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#0d47a1', '&:hover': { bgcolor: '#0a3a80' } }}>Generate Credentials</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ─── NEW: SUCCESS CREDENTIALS DIALOG ─── */}
+            <Dialog open={successDialogOpen} onClose={() => setSuccessDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, border: '1px solid #e5e7eb' } }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, pt: 2.5, pb: 1.5, color: '#16a34a' }}>
+                    <CheckCircleIcon /> Staff Member Onboarded
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 1, pb: 1 }}>
+                    <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>Share these temporary credentials securely with the new staff member.</Alert>
+                    {newCredentials && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, bgcolor: '#f8fafc', p: 3, borderRadius: 2, border: '1px solid #e5e7eb' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>USERNAME</Typography>
+                                    <Typography sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1.1rem' }}>{newCredentials.username}</Typography>
+                                </Box>
+                                <IconButton onClick={() => { navigator.clipboard.writeText(newCredentials.username); alert('Username copied!'); }} sx={{ color: '#0d47a1' }}><ContentCopy /></IconButton>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600 }}>TEMPORARY PASSWORD</Typography>
+                                    <Typography sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1.1rem', color: '#dc2626' }}>{newCredentials.password}</Typography>
+                                </Box>
+                                <IconButton onClick={() => { navigator.clipboard.writeText(newCredentials.password); alert('Password copied!'); }} sx={{ color: '#0d47a1' }}><ContentCopy /></IconButton>
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+                    <Button onClick={() => setSuccessDialogOpen(false)} variant="contained" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, bgcolor: '#0d47a1' }}>Done</Button>
                 </DialogActions>
             </Dialog>
         </Box>

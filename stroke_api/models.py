@@ -63,6 +63,7 @@ class DailyPatientReport(models.Model):
     well_being_score = models.IntegerField(default=3)
     notes = models.TextField(blank=True, null=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
+    ai_recommendation = models.TextField(blank=True, null=True, help_text="AI-generated clinical insight based on daily symptoms")
 
     def __str__(self):
         return f"{self.patient.first_name} - {self.report_date}"

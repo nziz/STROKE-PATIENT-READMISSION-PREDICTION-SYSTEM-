@@ -2,13 +2,16 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-ultimate-fix-ff186572-8a24-432d-bc37-c05496dc29a3")
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-fallback-key-for-dev")
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ["*"]
+
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,17 +20,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Third-party apps
     'rest_framework',
     'corsheaders',
+    
+    # Local apps
     'stroke_api',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # <-- MUST be at the top
+    'corsheaders.middleware.CorsMiddleware',  # MUST be at the top
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'stroke_api.middleware.TabSessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -53,7 +61,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'stroke_project.wsgi.application'
 
-# Database - PostgreSQL
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -82,18 +91,15 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# =============================================================================
-# CORS & CSRF — FIXED FOR LOCAL DEVELOPMENT
-# =============================================================================
+
 
 CORS_ALLOW_ALL_ORIGINS = False
 
-# ✅ ADDED your React frontend origins
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "http://localhost:3000",   # <-- YOUR REACT APP
-    "http://127.0.0.1:3000",   # <-- SAFETY COPY
+    "http://localhost:3000",   # React App
+    "http://127.0.0.1:3000",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -110,11 +116,10 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# ✅ CRITICAL: Turn OFF Secure flags for local HTTP
+# Cookie settings for local HTTP
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False   
 SESSION_COOKIE_HTTPONLY = True
-# Leave the cookie host-only so the app works through either localhost or 127.0.0.1.
 SESSION_COOKIE_DOMAIN = None
 CSRF_COOKIE_DOMAIN = None
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -122,18 +127,14 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 
-# Trusted origins for CSRF (already had localhost:3000, keep it)
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://127.0.0.1:3000',      
-    
 ]
 
-# =============================================================================
-# REST Framework
-# =============================================================================
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -144,9 +145,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# =============================================================================
-# Logging
-# =============================================================================
+
 
 LOGGING = {
     'version': 1,
@@ -166,18 +165,24 @@ LOGGING = {
         },
     },
 }
-TEMPLATES[0]['OPTIONS']['context_processors'] = [
-    'django.template.context_processors.debug',
-    'django.template.context_processors.request',
-    'django.contrib.auth.context_processors.auth',
-    'django.contrib.messages.context_processors.messages',
-]
-# Feature Flags
-ENABLE_EMAIL_NOTIFICATIONS = os.getenv('ENABLE_EMAIL_NOTIFICATIONS', 'False') == 'True'
+
+
+ENABLE_EMAIL_NOTIFICATIONS = os.getenv('ENABLE_EMAIL_NOTIFICATIONS', 'False') == 'False'
 ENABLE_NEW_RESULTS_PAGE = os.getenv('ENABLE_NEW_RESULTS_PAGE', 'False') == 'True'
 ENABLE_ADVANCED_SEARCH = os.getenv('ENABLE_ADVANCED_SEARCH', 'False') == 'True'
 
-# Email Configuration (optional)
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gihundwe.rw')
-HOSPITAL_CONTACT_NUMBER = os.getenv('HOSPITAL_CONTACT_NUMBER', '+250788123456')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+HOSPITAL_CONTACT_NUMBER = os.getenv('HOSPITAL_CONTACT_NUMBER', '+250788973787')
+
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'sadamudiv@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+# Note: Gmail often blocks sending from arbitrary aliases (like noreply@hospital.rw).
+# We force the DEFAULT_FROM_EMAIL to match your authenticated Gmail account to ensure delivery.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'Stroke System <{EMAIL_HOST_USER}>')

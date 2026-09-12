@@ -1,7 +1,21 @@
 import logging
+from django.contrib.sessions.backends.db import SessionStore
 from django.utils.timezone import now
 
 logger = logging.getLogger(__name__)
+
+
+class TabSessionMiddleware:
+    """Load the Django session selected by the current browser tab."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        session_key = request.headers.get('X-Tab-Session')
+        if session_key:
+            request.session = SessionStore(session_key=session_key)
+        return self.get_response(request)
 
 class AuditLogMiddleware:
     def __init__(self, get_response):

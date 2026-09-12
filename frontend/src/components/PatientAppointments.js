@@ -39,7 +39,7 @@ import {
 function PatientAppointments() {
     const navigate = useNavigate();
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     const patientId = user.patient_id;
 
     const [followups, setFollowups] = useState([]);

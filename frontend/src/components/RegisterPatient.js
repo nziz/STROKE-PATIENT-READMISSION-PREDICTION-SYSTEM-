@@ -55,6 +55,7 @@ function RegisterPatient() {
         age: '',
         gender: 'M',
         phone_number: '',
+        email: '', // NEW: Added Email State
         nihss_score: '',
         length_of_stay_days: '1',
         discharge_destination: 'home',
@@ -122,14 +123,13 @@ function RegisterPatient() {
         }
 
         try {
-            // REMOVED: has_urinary_catheter, hypercoagulable_state, 
-            // percutaneous_gastrostomy, hemodialysis, malnutrition
             const payload = {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 age: parseInt(formData.age),
                 gender: formData.gender,
                 phone_number: formData.phone_number,
+                email: formData.email, // NEW: Send Email to Backend
                 nihss_score: parseInt(formData.nihss_score) || 0,
                 length_of_stay_days: parseInt(formData.length_of_stay_days) || 1,
                 discharge_destination: formData.discharge_destination,
@@ -268,6 +268,19 @@ function RegisterPatient() {
                                     }}
                                 />
                             </Grid>
+                            {/* NEW: EMAIL FIELD */}
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Email Address"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={handleChange('email')}
+                                    placeholder="patient@example.com (Required for automated alerts)"
+                                    helperText="Used to send missed report reminders and high-risk alerts."
+                                    sx={textFieldSx}
+                                />
+                            </Grid>
                         </Grid>
                     </Box>
                 );
@@ -312,18 +325,6 @@ function RegisterPatient() {
                                     <MenuItem value="hospice">Hospice</MenuItem>
                                 </TextField>
                             </Grid>
-
-                            {/* ============================================================
-                                RISK FACTORS SECTION — REMOVED
-                                The following fields were removed per supervisor feedback:
-                                - Urinary Catheter
-                                - Hypercoagulable State
-                                - Percutaneous Gastrostomy
-                                - Hemodialysis
-                                - Malnutrition
-                                These are ICU-specific features not relevant to the
-                                stroke readmission prediction context at Gihundwe Hospital.
-                                ============================================================ */}
                         </Grid>
                     </Box>
                 );
@@ -352,6 +353,9 @@ function RegisterPatient() {
                                 <Grid item xs={6}><Typography variant="body2" sx={{ color: '#111827', fontWeight: 500 }}>{formData.gender === 'M' ? 'Male' : 'Female'}</Typography></Grid>
                                 <Grid item xs={6}><Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>Phone</Typography></Grid>
                                 <Grid item xs={6}><Typography variant="body2" sx={{ color: '#111827', fontWeight: 500 }}>{formData.phone_number || 'N/A'}</Typography></Grid>
+                                {/* NEW: Email in Review */}
+                                <Grid item xs={6}><Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>Email</Typography></Grid>
+                                <Grid item xs={6}><Typography variant="body2" sx={{ color: '#111827', fontWeight: 500 }}>{formData.email || 'N/A'}</Typography></Grid>
                                 <Grid item xs={6}><Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>NIHSS Score</Typography></Grid>
                                 <Grid item xs={6}><Typography variant="body2" sx={{ color: '#111827', fontWeight: 500 }}>{formData.nihss_score || 'N/A'}</Typography></Grid>
                                 <Grid item xs={6}><Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>Length of Stay</Typography></Grid>

@@ -29,8 +29,12 @@ const API = axios.create({
 // Request interceptor: Add CSRF token
 API.interceptors.request.use((config) => {
     const csrfToken = getCSRFToken();
+    const tabSession = sessionStorage.getItem('tab_session');
     if (csrfToken) {
         config.headers['X-CSRFToken'] = csrfToken;
+    }
+    if (tabSession) {
+        config.headers['X-Tab-Session'] = tabSession;
     }
     return config;
 });
@@ -44,7 +48,8 @@ API.interceptors.response.use(
         const isLoginPage = window.location.pathname === '/login';
         if (!isLoginPage && error.response && error.response.status === 401) {
             // Clear invalid user data and redirect to login
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('tab_session');
             window.location.href = '/login';
         }
         return Promise.reject(error);

@@ -3,30 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import {
-    Box,
-    Card,
-    CardContent,
-    Typography,
-    Grid,
-    Chip,
-    Button,
-    Avatar,
-    Divider,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
-    CircularProgress,
-    Alert,
+    Box, Card, CardContent, Typography, Grid, Chip, Button, Avatar, Divider,
+    CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import {
-    CheckCircle,
-    Warning,
-    Assignment,
-    Person,
-    CalendarToday,
-    LocalHospital,
-    GetApp as GetAppIcon,
+    CheckCircle, Warning, Assignment, CalendarToday,
+    LocalHospital, FileDownload
 } from '@mui/icons-material';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -39,14 +21,12 @@ function PatientDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     const patientId = user.patient_id;
-
-    console.log('PatientDashboard: patientId from localStorage =', patientId);
 
     useEffect(() => {
         if (!patientId) {
-            setError('You are not logged in as a patient. Please log in again.');
+            setError('Session expired or invalid. Please log in again.');
             setLoading(false);
             return;
         }
@@ -65,7 +45,7 @@ function PatientDashboard() {
             setLoading(false);
         } catch (err) {
             console.error('Error fetching patient data:', err);
-            setError('Failed to load your data. Please try again.');
+            setError('Failed to load clinical data. Please try again.');
             setLoading(false);
         }
     };
@@ -74,7 +54,6 @@ function PatientDashboard() {
         try {
             const res = await API.get('patient/reminders/');
             setReminders(res.data.reminders || []);
-            console.log('Reminders fetched:', res.data.reminders);
         } catch (err) {
             console.error('Error fetching reminders:', err);
         }
@@ -86,24 +65,15 @@ function PatientDashboard() {
             setReminders(reminders.filter(r => r.id !== reminderId));
         } catch (err) {
             console.error('Error marking reminder read:', err);
-            alert('Failed to dismiss reminder.');
         }
     };
 
-    const getRiskColor = (category) => {
-        const colors = { High: '#dc2626', Medium: '#f59e0b', Low: '#16a34a' };
-        return colors[category] || '#6b7280';
-    };
-
-    const getRiskBgColor = (category) => {
-        const colors = { High: '#fef2f2', Medium: '#fffbeb', Low: '#f0fdf4' };
-        return colors[category] || '#f9fafb';
-    };
-
+    const getRiskColor = (category) => ({ High: '#b91c1c', Medium: '#d97706', Low: '#15803d' }[category] || '#475569');
+    
     const getRiskIcon = (category) => {
-        if (category === 'High') return <Warning sx={{ color: '#dc2626' }} />;
-        if (category === 'Medium') return <Warning sx={{ color: '#f59e0b' }} />;
-        return <CheckCircle sx={{ color: '#16a34a' }} />;
+        if (category === 'High') return <Warning sx={{ color: '#b91c1c', fontSize: 18 }} />;
+        if (category === 'Medium') return <Warning sx={{ color: '#d97706', fontSize: 18 }} />;
+        return <CheckCircle sx={{ color: '#15803d', fontSize: 18 }} />;
     };
 
     const downloadFile = async (endpoint, filename) => {
@@ -121,213 +91,109 @@ function PatientDashboard() {
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
         } catch (error) {
-            console.error('Download failed:', error);
-            alert('Failed to download file. Please try again.');
+            alert('Failed to download clinical report.');
         }
     };
 
-    const handleExportCSV = () => {
-        if (patient) downloadFile(`patient/${patient.id}/export-csv/`, `my_reports.csv`);
-    };
-    const handleExportPDF = () => {
-        if (patient) downloadFile(`patient/${patient.id}/export-pdf/`, `my_reports.pdf`);
-    };
+    const handleExportCSV = () => patient && downloadFile(`patient/${patient.id}/export-csv/`, `clinical_history_${patient.hospital_id}.csv`);
+    const handleExportPDF = () => patient && downloadFile(`patient/${patient.id}/export-pdf/`, `clinical_report_${patient.hospital_id}.pdf`);
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
+    if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress sx={{ color: '#0d47a1' }} /></Box>;
+    
+    if (error) return (
+        <Box sx={{ p: 4, maxWidth: 600, mx: 'auto' }}>
+            <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
+            <Button variant="contained" sx={{ mt: 3, bgcolor: '#0f172a' }} onClick={() => navigate('/login')}>Return to Login</Button>
+        </Box>
+    );
 
-    if (error) {
-        return (
-            <Box sx={{ p: 3 }}>
-                <Alert severity="error">{error}</Alert>
-                <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate('/login')}>
-                    Go to Login
-                </Button>
-            </Box>
-        );
-    }
+    if (!patient) return null;
 
-    if (!patient) {
-        return (
-            <Box sx={{ p: 3 }}>
-                <Alert severity="warning">No patient data found.</Alert>
-            </Box>
-        );
-    }
+    const riskScore = patient.risk_score ?? patient.current_risk_score ?? 0;
+    const riskCategory = patient.risk_category || patient.current_risk_category || 'Low';
 
-    const riskScore = patient.current_risk_score || 0;
-    const riskCategory = patient.current_risk_category || 'Low';
-
-    const cardHoverSx = {
-        borderRadius: 3,
+    const clinicalCardSx = {
+        borderRadius: 2,
         bgcolor: '#ffffff',
-        border: '1px solid #e5e7eb',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-            transform: 'translateY(-3px)',
-            boxShadow: '0 12px 24px -8px rgba(0,0,0,0.1)',
-            borderColor: '#d1d5db',
-        },
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
     };
 
     return (
-        <Box>
-            {/* Reminder Banners */}
+        <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh', p: { xs: 2, md: 4 } }}>
+            {/* Clinical Alerts */}
             {reminders.map((reminder) => (
                 <Alert
                     key={reminder.id}
-                    severity="info"
-                    icon={<Assignment />}
-                    sx={{ mb: 2, borderRadius: 2 }}
+                    severity="warning"
+                    icon={<Assignment sx={{ color: '#d97706' }} />}
+                    sx={{ mb: 2, borderRadius: 2, bgcolor: '#fffbeb', border: '1px solid #fde68a', '& .MuiAlert-message': { color: '#92400e' } }}
                     action={
-                        <Button
-                            color="inherit"
-                            size="small"
-                            onClick={() => markReminderRead(reminder.id)}
-                            sx={{ textTransform: 'none', fontWeight: 500 }}
-                        >
-                            Dismiss
+                        <Button color="inherit" size="small" onClick={() => markReminderRead(reminder.id)} sx={{ textTransform: 'none', fontWeight: 600, color: '#92400e' }}>
+                            Acknowledge
                         </Button>
                     }
                 >
-                    <Typography variant="body2">
-                        <strong>Reminder:</strong> {reminder.message}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {new Date(reminder.created_at).toLocaleString()}
-                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>Clinical Reminder:</Typography>
+                    <Typography variant="body2">{reminder.message}</Typography>
                 </Alert>
             ))}
 
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+            {/* Portal Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#0d47a1', letterSpacing: '-0.5px' }}>
-                        My Health Dashboard
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
+                        Clinical Care Dashboard
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#6b7280', mt: 0.5 }}>
-                        Welcome back, {patient.first_name} {patient.last_name}
+                    <Typography variant="body1" sx={{ color: '#475569', mt: 0.5 }}>
+                        Welcome back, {patient.first_name}. Review your health metrics and submit daily updates.
                     </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                    <Chip
-                        label={`Patient ID: ${patient.hospital_id}`}
-                        variant="outlined"
-                        sx={{ borderRadius: 2, fontWeight: 500, borderColor: '#d1d5db', color: '#374151' }}
-                    />
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<GetAppIcon sx={{ fontSize: 18 }} />}
-                        onClick={handleExportCSV}
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            px: 2,
-                            py: 1,
-                            '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
-                        }}
-                    >
-                        CSV
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<GetAppIcon sx={{ fontSize: 18 }} />}
-                        onClick={handleExportPDF}
-                        sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            fontWeight: 500,
-                            borderColor: '#d1d5db',
-                            color: '#374151',
-                            px: 2,
-                            py: 1,
-                            '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' },
-                        }}
-                    >
-                        PDF
-                    </Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button variant="outlined" size="small" startIcon={<FileDownload sx={{ fontSize: 16 }} />} onClick={handleExportCSV} sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600, borderColor: '#cbd5e1', color: '#334155', '&:hover': { bgcolor: '#f1f5f9' } }}>CSV</Button>
+                    <Button variant="outlined" size="small" startIcon={<FileDownload sx={{ fontSize: 16 }} />} onClick={handleExportPDF} sx={{ borderRadius: 1.5, textTransform: 'none', fontWeight: 600, borderColor: '#cbd5e1', color: '#334155', '&:hover': { bgcolor: '#f1f5f9' } }}>PDF</Button>
                 </Box>
             </Box>
 
-            {/* Main Grid */}
             <Grid container spacing={3}>
-                {/* Left card - Profile */}
+                {/* LEFT COLUMN: Patient Chart */}
                 <Grid item xs={12} md={4}>
-                    <Card elevation={0} sx={cardHoverSx}>
-                        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Avatar sx={{ width: 80, height: 80, bgcolor: '#2563eb', fontSize: 32, mb: 1.5 }}>
+                    <Card elevation={0} sx={clinicalCardSx}>
+                        <CardContent sx={{ p: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                                <Avatar sx={{ width: 56, height: 56, bgcolor: '#0f172a', fontSize: 20, fontWeight: 700, color: '#fff' }}>
                                     {patient.first_name?.charAt(0)}{patient.last_name?.charAt(0)}
                                 </Avatar>
-                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1.1rem' }}>
-                                    {patient.first_name} {patient.last_name}
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: '#6b7280', mt: 0.5 }}>
-                                    {patient.age} years • {patient.gender === 'M' ? 'Male' : 'Female'}
-                                </Typography>
-                                <Chip
-                                    icon={getRiskIcon(riskCategory)}
-                                    label={riskCategory}
-                                    sx={{
-                                        mt: 1.5,
-                                        bgcolor: getRiskBgColor(riskCategory),
-                                        color: getRiskColor(riskCategory),
-                                        fontWeight: 600,
-                                        borderRadius: 2,
-                                    }}
-                                />
-                            </Box>
-                            <Divider sx={{ my: 2.5, borderColor: '#f3f4f6' }} />
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-                                        <Person sx={{ fontSize: 18 }} />
-                                    </Box>
-                                    <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500 }}>
-                                        ID: {patient.hospital_id}
+                                <Box>
+                                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                                        {patient.first_name} {patient.last_name}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                        {patient.age} yrs • {patient.gender === 'M' ? 'Male' : 'Female'} • ID: {patient.hospital_id}
                                     </Typography>
                                 </Box>
+                            </Box>
+                            
+                            <Divider sx={{ borderColor: '#f1f5f9', mb: 2.5 }} />
+                            
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-                                        <CalendarToday sx={{ fontSize: 18 }} />
-                                    </Box>
-                                    <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500 }}>
+                                    <CalendarToday sx={{ color: '#64748b', fontSize: 18 }} />
+                                    <Typography variant="body2" sx={{ color: '#334155', fontWeight: 500 }}>
                                         Admitted: {new Date(patient.admission_date).toLocaleDateString()}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-                                        <LocalHospital sx={{ fontSize: 18 }} />
-                                    </Box>
-                                    <Typography variant="body2" sx={{ color: '#374151', fontWeight: 500 }}>
-                                        NIHSS: {patient.nihss_score || 'N/A'}
+                                    <LocalHospital sx={{ color: '#64748b', fontSize: 18 }} />
+                                    <Typography variant="body2" sx={{ color: '#334155', fontWeight: 500 }}>
+                                        Baseline NIHSS: {patient.nihss_score || 'N/A'}
                                     </Typography>
                                 </Box>
                             </Box>
+
                             <Button
-                                variant="contained"
-                                fullWidth
-                                startIcon={<Assignment sx={{ fontSize: 18 }} />}
-                                sx={{
-                                    mt: 3,
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 500,
-                                    bgcolor: '#2563eb',
-                                    py: 1,
-                                    boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
-                                    '&:hover': { bgcolor: '#1d4ed8' },
-                                }}
+                                variant="contained" fullWidth startIcon={<Assignment sx={{ fontSize: 18 }} />}
+                                sx={{ mt: 4, borderRadius: 1.5, textTransform: 'none', fontWeight: 700, bgcolor: '#0d47a1', py: 1.2, '&:hover': { bgcolor: '#0a3a80' } }}
                                 onClick={() => navigate('/reports', { state: { patientId: patient.id } })}
                             >
                                 Submit Daily Report
@@ -336,99 +202,89 @@ function PatientDashboard() {
                     </Card>
                 </Grid>
 
-                {/* Right column */}
+                {/* RIGHT COLUMN: Risk & History */}
                 <Grid item xs={12} md={8}>
-                    {/* Risk Score Card */}
-                    <Card elevation={0} sx={{ ...cardHoverSx, mb: 3 }}>
-                        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4 }}>
-                                <Box sx={{ width: 140, height: 140, flexShrink: 0 }}>
+                    {/* Risk Assessment */}
+                    <Card elevation={0} sx={{ ...clinicalCardSx, mb: 3 }}>
+                        <CardContent sx={{ p: 3 }}>
+                            <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700, letterSpacing: '0.1em', fontSize: '0.75rem' }}>
+                                Readmission Probability Index
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4, mt: 2 }}>
+                                <Box sx={{ width: 130, height: 130, flexShrink: 0 }}>
                                     <CircularProgressbar
-                                        value={riskScore * 100}
-                                        text={`${Math.round(riskScore * 100)}%`}
-                                        styles={buildStyles({
-                                            pathColor: getRiskColor(riskCategory),
-                                            textColor: getRiskColor(riskCategory),
-                                            trailColor: '#e5e7eb',
-                                            textSize: '18px',
-                                            pathTransitionDuration: 0.5,
-                                        })}
+                                        value={riskScore * 100} text={`${Math.round(riskScore * 100)}%`}
+                                        styles={buildStyles({ pathColor: getRiskColor(riskCategory), textColor: '#0f172a', trailColor: '#f1f5f9', textSize: '24px', fontWeight: 'bold' })}
                                     />
                                 </Box>
                                 <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, color: getRiskColor(riskCategory), fontSize: '1.25rem' }}>
-                                        Readmission Risk
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: '#6b7280', mb: 1.5, mt: 0.5 }}>
-                                        Based on your clinical data and {reports.length} reports
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                                        <Chip
-                                            label={`Risk: ${riskCategory}`}
-                                            sx={{
-                                                bgcolor: getRiskBgColor(riskCategory),
-                                                color: getRiskColor(riskCategory),
-                                                fontWeight: 600,
-                                                borderRadius: 2,
-                                            }}
-                                        />
-                                        <Chip
-                                            label={`Reports: ${reports.length}`}
-                                            variant="outlined"
-                                            sx={{ borderRadius: 2, borderColor: '#d1d5db', color: '#374151', fontWeight: 500 }}
-                                        />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: { xs: 'center', sm: 'flex-start' }, mb: 1 }}>
+                                        {getRiskIcon(riskCategory)}
+                                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                                            {riskCategory} Risk Category
+                                        </Typography>
                                     </Box>
-                                    <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block', mt: 1.5, fontWeight: 500 }}>
-                                        Last updated: {patient.last_updated ? new Date(patient.last_updated).toLocaleString() : 'N/A'}
+                                    <Typography variant="body2" sx={{ color: '#475569', mb: 2, lineHeight: 1.6 }}>
+                                        Calculated using baseline NIHSS, symptom trends, and medication adherence.
                                     </Typography>
+                                    <Chip label={`${reports.length} Total Reports Logged`} size="small" sx={{ bgcolor: '#f1f5f9', color: '#334155', fontWeight: 600, borderRadius: 1 }} />
                                 </Box>
                             </Box>
                         </CardContent>
                     </Card>
 
-                    {/* Recent Reports */}
-                    <Card elevation={0} sx={cardHoverSx}>
-                        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                <Assignment sx={{ color: '#6b7280', fontSize: 20 }} />
-                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827', fontSize: '1rem' }}>
-                                    Recent Reports
+                    {/* ENTERPRISE DATA TABLE (Handles infinite reports cleanly) */}
+                    <Card elevation={0} sx={clinicalCardSx}>
+                        <CardContent sx={{ p: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a', fontSize: '1rem' }}>
+                                    Clinical History Log
                                 </Typography>
                             </Box>
+                            
                             {reports.length === 0 ? (
-                                <Box sx={{ py: 4, textAlign: 'center' }}>
-                                    <Typography sx={{ color: '#6b7280' }}>No reports yet. Submit your first daily report!</Typography>
+                                <Box sx={{ py: 6, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2, border: '1px dashed #cbd5e1' }}>
+                                    <Typography sx={{ color: '#64748b', fontWeight: 500 }}>No clinical reports logged yet.</Typography>
                                 </Box>
                             ) : (
-                                <List sx={{ py: 0 }}>
-                                    {reports.slice(0, 5).map((r) => (
-                                        <ListItem
-                                            key={r.id}
-                                            sx={{
-                                                px: 0,
-                                                py: 1.5,
-                                                borderBottom: '1px solid #f3f4f6',
-                                                '&:last-child': { borderBottom: 'none' }
-                                            }}
-                                        >
-                                            <ListItemIcon sx={{ minWidth: 36 }}>
-                                                <CheckCircle sx={{ color: '#16a34a', fontSize: 20 }} />
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827' }}>
-                                                        {new Date(r.date).toLocaleDateString()}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                                                        NIHSS: {r.nihss_score || 'N/A'} • Notes: {r.notes || 'None'}
-                                                    </Typography>
-                                                }
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
+                                <TableContainer sx={{ maxHeight: 320 }}>
+                                    <Table stickyHeader size="small" aria-label="clinical history">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell sx={{ fontWeight: 700, color: '#64748b', bgcolor: '#f8fafc', borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', textTransform: 'uppercase' }}>Date</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, color: '#64748b', bgcolor: '#f8fafc', borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', textTransform: 'uppercase' }}>Adherence</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, color: '#64748b', bgcolor: '#f8fafc', borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', textTransform: 'uppercase' }}>Well-being</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, color: '#64748b', bgcolor: '#f8fafc', borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', textTransform: 'uppercase' }}>Notes</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {reports.map((r) => (
+                                                <TableRow key={r.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                                                    <TableCell sx={{ py: 1.5, color: '#0f172a', fontWeight: 600, fontSize: '0.85rem' }}>
+                                                        {new Date(r.date || r.report_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                    </TableCell>
+                                                    <TableCell sx={{ py: 1.5 }}>
+                                                        <Chip 
+                                                            label={r.took_medications ? 'Taken' : 'Missed'} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                fontWeight: 700, height: 22, fontSize: '0.7rem',
+                                                                bgcolor: r.took_medications ? '#dcfce7' : '#fee2e2', 
+                                                                color: r.took_medications ? '#166534' : '#991b1b'
+                                                            }} 
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell sx={{ py: 1.5, fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>
+                                                        {r.well_being_score}/5
+                                                    </TableCell>
+                                                    <TableCell sx={{ py: 1.5, color: '#64748b', fontSize: '0.8rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {r.notes || '—'}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
                             )}
                         </CardContent>
                     </Card>

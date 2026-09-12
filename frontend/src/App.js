@@ -32,7 +32,7 @@ import PatientSearch from './pages/PatientSearch';
 import ReportResults from './pages/ReportResults';
 
 function App() {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = sessionStorage.getItem('user');
     const user = storedUser ? JSON.parse(storedUser) : null;
     const isDoctor = user?.role === 'doctor';
     const isPatient = user?.role === 'patient';
